@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หน้าผู้ดูแล: จัดการคำถาม</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2vK/lV8f7xW3m5M1Zc6p9z2w1yT4fF/r5m1v3i4f8O/1Z+6h+5v+2/4g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #004085;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        .btn-add {
+            width: 100%;
+            padding: 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .btn-add:hover {
+            background-color: #218838;
+        }
+        .questions-list {
+            margin-top: 30px;
+        }
+        .question-item {
+            background: #f8f9fa;
+            border: 1px solid #e2e6ea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .question-item .text {
+            flex-grow: 1;
+        }
+        .question-item .buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-edit, .btn-delete {
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .btn-edit {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-edit:hover {
+            background-color: #0056b3;
+        }
+        .btn-delete {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-delete:hover {
+            background-color: #c82333;
+        }
+        #messageBox {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="messageBox"></div>
+
+    <div class="container">
+        <h1>หน้าผู้ดูแล: จัดการคำถาม</h1>
+
+        <h2>เพิ่มคำถามใหม่</h2>
+        <div id="addQuestionForm">
+            <div class="form-group">
+                <label for="partSelect">เลือก Part:</label>
+                <select id="partSelect">
+                    <option value="part1">Part 1: ปฏิเสธทางโทรศัพท์</option>
+                    <option value="part2">Part 2: คำถามสุขภาพ</option>
+                    <option value="part3">Part 3: ปฏิเสธหลังปิดการขาย</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="questionInput">ข้อความคำถาม:</label>
+                <input type="text" id="questionInput" placeholder="พิมพ์คำถามที่นี่..." required>
+            </div>
+            <button id="addBtn" class="btn-add"><i class="fas fa-plus-circle"></i> เพิ่มคำถาม</button>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>รายการคำถามปัจจุบัน</h2>
+        <div id="questionsList" class="questions-list">
+            </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+        // This function displays a custom message box.
+        function showMessage(text, type = 'info') {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = text;
+            messageBox.style.display = 'block';
+            if (type === 'error') {
+                messageBox.style.backgroundColor = '#f8d7da';
+                messageBox.style.color = '#721c24';
+                messageBox.style.borderColor = '#f5c6cb';
+            } else {
+                messageBox.style.backgroundColor = '#d1e7dd';
+                messageBox.style.color = '#0f5132';
+                messageBox.style.borderColor = '#badbcc';
+            }
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 3000);
+        }
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4OrZERUoxWPiShCEWVvz1MK9cYGO3_K8",
+            authDomain: "new-record-3ccd6.firebaseapp.com",
+            projectId: "new-record-3ccd6",
+            storageBucket: "new-record-3ccd6.appspot.com",
+            messagingSenderId: "1065863160189",
+            appId: "1:1065863160189:web:25313e55b0733f5e126c14",
+            measurementId: "G-JW6N2HYR58"
+        };
+        
+        let app, db, auth;
+        let currentUser = null;
+
+        window.onload = () => {
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
+                showMessage("เกิดข้อผิดพลาด: API Key ไม่ถูกต้อง โปรดตรวจสอบการตั้งค่า Firebase", "error");
+                return;
+            }
+
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            onAuthStateChanged(auth, user => {
+                if (!user) {
+                    showMessage("กรุณาเข้าสู่ระบบด้วยบัญชีผู้ดูแล", "error");
+                    // อาจเพิ่มโค้ด redirect ไปหน้า login ได้
+                } else {
+                    currentUser = user;
+                    loadQuestions();
+                }
+            });
+        };
+
+        const questionsListEl = document.getElementById("questionsList");
+        const partSelectEl = document.getElementById("partSelect");
+        const addBtn = document.getElementById("addBtn");
+
+        // Load questions from Firestore
+        async function loadQuestions() {
+            questionsListEl.innerHTML = 'กำลังโหลดคำถาม...';
+            try {
+                const part = partSelectEl.value;
+                const q = query(collection(db, `questions_${part}`), orderBy("order", "asc"));
+                const querySnapshot = await getDocs(q);
+                let questionsHtml = '';
+                let questionIndex = 1;
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    questionsHtml += `
+                        <div class="question-item" data-id="${doc.id}" data-part="${part}">
+                            <div class="text"><b>${questionIndex++}.</b> ${data.text}</div>
+                            <div class="buttons">
+                                <button class="btn-edit" data-id="${doc.id}"><i class="fas fa-edit"></i></button>
+                                <button class="btn-delete" data-id="${doc.id}"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+                questionsListEl.innerHTML = questionsHtml || 'ยังไม่มีคำถามสำหรับ Part นี้';
+            } catch (e) {
+                console.error("Error loading questions: ", e);
+                showMessage("ไม่สามารถโหลดคำถามได้", "error");
+            }
+        }
+
+        // Add new question
+        addBtn.addEventListener('click', async () => {
+            const part = partSelectEl.value;
+            const questionText = document.getElementById("questionInput").value.trim();
+            if (questionText === "") {
+                showMessage("กรุณากรอกข้อความคำถาม", "error");
+                return;
+            }
+
+            try {
+                // Determine the next order number
+                const q = query(collection(db, `questions_${part}`), orderBy("order", "desc"));
+                const querySnapshot = await getDocs(q);
+                const currentCount = querySnapshot.docs.length;
+
+                await addDoc(collection(db, `questions_${part}`), {
+                    text: questionText,
+                    order: currentCount + 1,
+                    createdAt: new Date()
+                });
+                showMessage("เพิ่มคำถามเรียบร้อยแล้ว", "info");
+                document.getElementById("questionInput").value = '';
+                loadQuestions();
+            } catch (e) {
+                console.error("Error adding question: ", e);
+                showMessage("ไม่สามารถเพิ่มคำถามได้", "error");
+            }
+        });
+
+        // Delete or Edit question
+        questionsListEl.addEventListener('click', async (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            const docId = target.getAttribute('data-id');
+            const part = target.closest('.question-item').getAttribute('data-part');
+
+            if (target.classList.contains('btn-delete')) {
+                if (confirm("คุณแน่ใจหรือไม่ที่จะลบคำถามนี้?")) {
+                    try {
+                        await deleteDoc(doc(db, `questions_${part}`, docId));
+                        showMessage("ลบคำถามเรียบร้อยแล้ว", "info");
+                        loadQuestions();
+                    } catch (e) {
+                        console.error("Error deleting question: ", e);
+                        showMessage("ไม่สามารถลบคำถามได้", "error");
+                    }
+                }
+            } else if (target.classList.contains('btn-edit')) {
+                const newText = prompt("แก้ไขข้อความคำถาม:", target.closest('.question-item').querySelector('.text').textContent.trim().split('. ')[1]);
+                if (newText !== null && newText.trim() !== '') {
+                    try {
+                        await updateDoc(doc(db, `questions_${part}`, docId), {
+                            text: newText.trim()
+                        });
+                        showMessage("แก้ไขคำถามเรียบร้อยแล้ว", "info");
+                        loadQuestions();
+                    } catch (e) {
+                        console.error("Error updating question: ", e);
+                        showMessage("ไม่สามารถแก้ไขคำถามได้", "error");
+                    }
+                }
+            }
+        });
+
+        // Event listener for part selection
+        partSelectEl.addEventListener('change', loadQuestions);
+
+    </script>
+</body>
+</html>
