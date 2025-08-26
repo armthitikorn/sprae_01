@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Part 2: การปฏิเสธทางโทรศัพท์</title>
+    <title>Part 3: การปฏิเสธทางโทรศัพท์</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2vK/lV8f7xW3m5M1Zc6p9z2w1yT4fF/r5m1v3i4f8O/1Z+6h+5v+2/4g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body {
@@ -171,7 +171,7 @@
     </div>
 
     <div class="container">
-        <h1>Part 2: การปฏิเสธทางโทรศัพท์</h1>
+        <h1>Part 3: การปฏิเสธทางโทรศัพท์</h1>
         <div class="user-info"><b>ชื่อผู้ทำแบบทดสอบ:</b> <span id="userNameDisplay">กำลังโหลด...</span></div>
 
         <div id="questions"></div>
@@ -383,7 +383,7 @@
                 await Promise.all(firestorePromises);
                 showMessage("ส่งไฟล์เสียงทั้งหมดเรียบร้อยแล้ว!", "info");
                 setTimeout(() => {
-                    window.location.href = "part2.html";
+                    window.location.href = "part5.html";
                 }, 2000);
             } catch (err) {
                 console.error('เกิดข้อผิดพลาดในการอัปโหลด', err);
@@ -396,4 +396,5 @@
         document.getElementById('submitAllBtn').addEventListener('click', uploadAll);
     </script>
 </body>
+
 </html>
